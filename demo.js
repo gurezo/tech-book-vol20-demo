@@ -3,45 +3,41 @@ import { requestGPIOAccess } from './node_modules/node-web-gpio/dist/index.js';
 import { requestI2CAccess } from './node_modules/node-web-i2c/index.js';
 const sleep = (msec) => new Promise((resolve) => setTimeout(resolve, msec));
 
-async function blink() {
-  const gpioAccess = await requestGPIOAccess(); // GPIO を操作する
-  const port = gpioAccess.ports.get(26); // 26 番ポートを操作する
+// Raspberry Pi Zero (BCM GPIO) pin assignment:
+// - GPIO17 / GPIO27 / GPIO22 / GPIO5: external LEDs
+// - I2C (SDA/SCL): NeoPixel board controller (@chirimen/neopixel-i2c)
+const LED_GPIO_PINS = [17, 27, 22, 5];
+const LED_BLINK_INTERVAL_MS = 500;
 
-  await port.export('out'); // ポートを出力モードに設定
-
-  // 無限ループ
-  for (;;) {
-    // 1秒間隔で LED が点滅します
-    await port.write(1); // LEDを点灯
-    await sleep(1000); // 1000 ms (1秒) 待機
-    await port.write(0); // LEDを消灯
-    await sleep(1000); // 1000 ms (1秒) 待機
-  }
-}
-
-const neoPixels = 7; // LEDå€‹æ•°
+const neoPixels = 7;
 
 main();
 
 async function main() {
+  const gpioAccess = await requestGPIOAccess();
+  const ledPorts = LED_GPIO_PINS.map((pin) => gpioAccess.ports.get(pin));
+  for (const port of ledPorts) {
+    await port.export('out');
+    await port.write(0);
+  }
+
   const i2cAccess = await requestI2CAccess();
   const port = i2cAccess.ports.get(1);
   const npix = new NPIX(port, 0x41);
   await npix.init(neoPixels);
 
+  // 初回のみサンプル動作を実行
   await nPixTest1(npix);
-
   await nPixTest2(npix);
-
   await nPixTest3(npix, pattern4);
-
   await npix.setGlobal(0, 0, 0);
 
-  await blink();
+  // LED 4個 + NeoPixel を同期させて永久ループで点滅
+  await runDemoLoop(ledPorts, npix);
 }
 
 async function nPixTest1(npix) {
-  // å…¨LEDã‚’åŒã˜è‰²ã«ã™ã‚‹ã‚±ãƒ¼ã‚¹
+  // 全LEDを同じ色にするケース
   await npix.setGlobal(10, 0, 0);
   await sleep(200);
   await npix.setGlobal(0, 10, 0);
@@ -59,7 +55,7 @@ async function nPixTest1(npix) {
   await npix.setGlobal(0, 0, 0);
 }
 
-// ãƒ‘ã‚¿ãƒ¼ãƒ³ã¯RRGGBB ã®ä¸¦ã³ã§
+// パターンはRRGGBB の並びで
 const pattern0 = [
   0xff0000, 0x00ff00, 0x0000ff, 0xff0000, 0x00ff00, 0x0000ff, 0xff0000,
 ];
@@ -86,7 +82,7 @@ const pattern7 = [
 ];
 
 async function setPattern(npix, pattern) {
-  // ãƒ‘ã‚¿ãƒ¼ãƒ³è¨­å®š
+  // パターン設定
   const grbArray = [];
   for (const color of pattern) {
     const r = (color >> 16) & 0xff;
@@ -100,7 +96,7 @@ async function setPattern(npix, pattern) {
 }
 
 async function nPixTest2(npix) {
-  // ãƒ‘ã‚¿ãƒ¼ãƒ³ã‚’å¤‰åŒ–ã•ã›ã‚‹
+  // パターンを変化させる
   await setPattern(npix, pattern0);
   await sleep(200);
   await setPattern(npix, pattern1);
@@ -119,7 +115,7 @@ async function nPixTest2(npix) {
 }
 
 async function nPixTest3(npix, pattern) {
-  // ãƒ‘ã‚¿ãƒ¼ãƒ³ã‚’æµã™
+  // パターンを流す
   for (let i = 0; i < 30; i++) {
     const p = i % pattern.length;
     const spattern = [];
@@ -130,5 +126,28 @@ async function nPixTest3(npix, pattern) {
     console.log(spattern);
     await setPattern(npix, spattern);
     await sleep(200);
+  }
+}
+
+async function runDemoLoop(ledPorts, npix) {
+  let on = false;
+  let step = 0;
+  const loopPatterns = [pattern0, pattern2, pattern4, pattern6];
+
+  for (;;) {
+    on = !on;
+    const value = on ? 1 : 0;
+    for (const port of ledPorts) {
+      await port.write(value);
+    }
+
+    if (on) {
+      await setPattern(npix, loopPatterns[step % loopPatterns.length]);
+      step += 1;
+    } else {
+      await npix.setGlobal(0, 0, 0);
+    }
+
+    await sleep(LED_BLINK_INTERVAL_MS);
   }
 }
