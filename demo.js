@@ -1,8 +1,7 @@
 import NPIX from '@chirimen/neopixel-i2c';
+import { requestGPIOAccess } from './node_modules/node-web-gpio/dist/index.js';
 import { requestI2CAccess } from './node_modules/node-web-i2c/index.js';
 const sleep = (msec) => new Promise((resolve) => setTimeout(resolve, msec));
-
-import { requestGPIOAccess } from './node_modules/node-web-gpio/dist/index.js';
 
 async function blink() {
   const gpioAccess = await requestGPIOAccess(); // GPIO を操作する
