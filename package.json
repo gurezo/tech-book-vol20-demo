@@ -1,0 +1,26 @@
+{
+  "name": "tech-book-vol20-demo",
+  "version": "0.0.1",
+  "description": "",
+  "keywords": [
+    "IoT",
+    "Raspberry",
+    "Pi",
+    "Zero"
+  ],
+  "homepage": "https://github.com/gurezo/tech-book-vol20-demo#readme",
+  "bugs": {
+    "url": "https://github.com/gurezo/tech-book-vol20-demo/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gurezo/tech-book-vol20-demo.git"
+  },
+  "license": "ISC",
+  "author": "akihiko.kigure",
+  "type": "commonjs",
+  "main": "demo.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
