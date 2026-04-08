@@ -22,5 +22,8 @@
   "main": "demo.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "node-web-i2c": "^1.1.66"
   }
 }
